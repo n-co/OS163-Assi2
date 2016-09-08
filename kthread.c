@@ -8,10 +8,12 @@
 #include "proc.h"
 #include "spinlock.h"
 
-static int nexttid = 0;
+static int nexttid = 1;
 
 extern void forkret(void);
 extern void trapret(void);
+
+static void wakeup2(void *chan);
 
 
 struct thread*
@@ -62,7 +64,7 @@ int kthread_create(void*(*start_func)(), void* stack, int stack_size){
 }
 
 int kthread_id(void){
-  if(thread->tid < 0)
+  if(thread->tid <= 0)
     return -1;
   return thread->tid;
 }
@@ -70,7 +72,7 @@ int kthread_id(void){
 void kthread_exit(void){  // TODO: not sure about this implementation
   struct thread *t;
   
-  wakeup1(thread);
+  wakeup2(thread);
   thread->state = ZOMBIE;
 
   int num_of_threads;
@@ -85,23 +87,52 @@ void kthread_exit(void){  // TODO: not sure about this implementation
 
 int kthread_join(int thread_id){
   struct thread *t;
+  acquire(&proc->lock);
   for(t = proc->pthreads; t < &proc->pthreads[NTHREAD]; t++)
     if(t->tid != thread_id)
       continue;
-  if(t == &proc->pthreads[NTHREAD])
-    return -1; // thread_id not found
+  if(t == &proc->pthreads[NTHREAD]){
+    // thread_id not found 
+    release(&proc->lock);
+    return -1;   
+  }
 
   if(t->state == ZOMBIE){
     kfree(t->kstack);
     t->kstack = 0;
-    p->state = UNUSED;
+    t->state = UNUSED;
+    release(&proc->lock);
     return 0;
   }
-  else if(t->state == UNUSED)
+  else if(t->state == UNUSED){
+    release(&proc->lock);
     return 0;
-  else{
-    // TODO
   }
+  
+  else{ // RUNNABLE / RUNNING / EMBRYO etc
+    while(t->state != ZOMBIE)
+      sleep(t, &proc->lock);
 
-  return 0; //TODO 1.2
+    if(t->state == UNUSED)
+      panic("kthread_join: thread become unused");
+    
+    kfree(t->kstack);
+    t->kstack = 0;
+    t->state = UNUSED;
+    release(&proc->lock);
+    return 0;
+  }
+}
+
+//PAGEBREAK!
+// Wake up all processes sleeping on chan.
+// The ptable lock must be held.
+static void
+wakeup2(void *chan)
+{
+  struct thread *t;
+
+  for(t = proc->pthreads; t < &proc->pthreads[NPROC]; t++)
+    if(t->state == SLEEPING && t->chan == chan)
+      t->state = RUNNABLE;
 }
