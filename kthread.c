@@ -60,7 +60,19 @@ found:
 }
 
 int kthread_create(void*(*start_func)(), void* stack, int stack_size){
-  return 0; //TODO 1.2
+  struct thread *t;  
+  t = allocthread(proc);
+  if(t==0)
+    return -1;
+  *t->tf = *thread->tf; // initialize tf with non-garbage values 
+  t->tf->eip = (uint)start_func;
+  t->tf->esp = (uint)(stack + stack_size);
+
+  acquire(&proc->lock);
+  t->state = RUNNABLE;
+  release(&proc->lock);
+  
+  return t->tid; 
 }
 
 int kthread_id(void){
