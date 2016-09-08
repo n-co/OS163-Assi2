@@ -6,7 +6,7 @@
 #include "defs.h"
 #include "x86.h"
 #include "elf.h"
-
+//void wait_before_exec(void);
 int
 exec(char *path, char **argv)
 {
@@ -17,6 +17,8 @@ exec(char *path, char **argv)
   struct inode *ip;
   struct proghdr ph;
   pde_t *pgdir, *oldpgdir;
+
+  //wait_before_exec(); // 1.1
 
   begin_op();
   if((ip = namei(path)) == 0){
@@ -105,3 +107,39 @@ exec(char *path, char **argv)
   }
   return -1;
 }
+
+
+/*void wait_before_exec(void){
+  struct proc *p;
+  struct thread *curr_t;
+  int threadsAlive=1;
+  aquire(&ptable.lock);
+  thread->tproc->executed=1;
+  while(1){
+    for(curr_t=proc->pthreads; curr_t < &proc->pthreads[NTHREAD]; curr_t++){
+      if(curr_t == thread || curr_t->state == UNUSED)
+        continue;
+      if(curr_t->state==ZOMBIE){
+        kfree(curr_t->kstack);
+        curr_t->kstack = 0;
+        curr_t->state = UNUSED;
+        continue; 
+      }
+
+      if(curr_t->state == SLEEPING){
+       curr_t->state = RUNNABLE;
+      }
+
+
+
+      threadsAlive=0;
+
+    }
+
+
+  }
+
+
+}*/
+
+

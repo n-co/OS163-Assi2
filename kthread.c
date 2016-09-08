@@ -87,7 +87,7 @@ void kthread_exit(void){  // TODO: not sure about this implementation
   wakeup2(thread);
   thread->state = ZOMBIE;
 
-  int num_of_threads;
+  int num_of_threads = 0;
   for(t = thread->tproc->pthreads; t < &thread->tproc->pthreads[NTHREAD] ; t++){
       if(t->state != UNUSED && t->state != ZOMBIE)
         num_of_threads++;

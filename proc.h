@@ -73,6 +73,7 @@ struct proc {
 
   struct thread pthreads[NTHREAD]; //1.1
   struct spinlock lock;
+  int executed;
 };
 
 // Process memory is laid out contiguously, low addresses first:

@@ -37,11 +37,11 @@ void
 trap(struct trapframe *tf)
 {
   if(tf->trapno == T_SYSCALL){
-    if(proc->killed)    //@ proc or thread?
+    if(proc->killed || proc->executed)    //@ proc or thread?
       exit();
     thread->tf = tf;    //@ 
     syscall();
-    if(proc->killed)    //@ proc or thread?
+    if(proc->killed || proc->executed)    //@ proc or thread?
       exit();
     return;
   }
@@ -97,7 +97,7 @@ trap(struct trapframe *tf)
   // Force process exit if it has been killed and is in user space.
   // (If it is still executing in the kernel, let it keep running 
   // until it gets to the regular system call return.)
-  if(proc && proc->killed && (tf->cs&3) == DPL_USER)
+  if(proc && (proc->killed || proc->executed) && (tf->cs&3) == DPL_USER)
     exit();
 
   // Force process to give up CPU on clock tick.
@@ -106,6 +106,6 @@ trap(struct trapframe *tf)
     yield();
 
   // Check if the process has been killed since we yielded
-  if(proc && proc->killed && (tf->cs&3) == DPL_USER)
+  if(proc && (proc->killed || proc->executed)  && (tf->cs&3) == DPL_USER)
     exit();
 }
