@@ -1,4 +1,7 @@
 // Segments in proc->gdt.
+#include "kthread.h"
+#include "spinlock.h"
+
 #define NSEGS     7
 
 // Per-CPU state
@@ -29,6 +32,7 @@ extern int ncpu;
 // in thread libraries such as Linux pthreads.
 extern struct cpu *cpu asm("%gs:0");       // &cpus[cpunum()]
 extern struct proc *proc asm("%gs:4");     // cpus[cpunum()].proc
+extern struct thread *thread asm("%gs:8"); // 1.1
 
 //PAGEBREAK: 17
 // Saved registers for kernel context switches.
@@ -49,7 +53,7 @@ struct context {
   uint eip;
 };
 
-enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
+//enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
 // Per-process state
 struct proc {
@@ -66,6 +70,9 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+
+  struct thread pthreads[NTHREAD]; //1.1
+  struct spinlock lock;
 };
 
 // Process memory is laid out contiguously, low addresses first:
