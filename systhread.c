@@ -7,9 +7,15 @@
 #include "mmu.h"
 #include "proc.h"
 
-
 int sys_kthread_create(void){
-  return 0;
+  void*(*start_func)();
+  void *stack;
+  int stack_size;
+  if(argint(0, (int*)&start_func) < 0 ||
+  	 argint(1, (int*)&stack) < 0 ||
+  	 argint(2, &stack_size) < 0)
+  	return -1;
+  return kthread_create(start_func, stack, stack_size);
 }
 
 int sys_kthread_id(void){
@@ -17,9 +23,12 @@ int sys_kthread_id(void){
 }
 
 int sys_kthread_exit(void){
+  kthread_exit();
   return 0;
 }
 int sys_kthread_join(void){
-  return 0;
+  int tid;
+  if(argint(0, &tid) < 0)
+    return -1;
+  return kthread_join(tid);
 }
-
