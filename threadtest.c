@@ -39,7 +39,7 @@ void test1(void){
 	}
 
 	//thread was created
-	kthread_join(tid);
+	printf(1, "join = %d\n", kthread_join(tid));
 	if(tester == -1)
 		printf(1, "TEST 1.b. FAILED - kthread_join not waiting\n");
 	else
