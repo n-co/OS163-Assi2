@@ -19,12 +19,14 @@ exec(char *path, char **argv)
   pde_t *pgdir, *oldpgdir;
 
   //wait_before_exec(); // 1.1
-
+  //cprintf("path: %s\n", path);
+  //cprintf("argv[0]: %s\n", argv[0]);
   begin_op();
   if((ip = namei(path)) == 0){
     end_op();
     return -1;
   }
+
   ilock(ip);
   pgdir = 0;
 
@@ -36,6 +38,7 @@ exec(char *path, char **argv)
 
   if((pgdir = setupkvm()) == 0)
     goto bad;
+
 
   // Load program into memory.
   sz = 0;
@@ -51,6 +54,7 @@ exec(char *path, char **argv)
     if(loaduvm(pgdir, (char*)ph.vaddr, ip, ph.off, ph.filesz) < 0)
       goto bad;
   }
+
   iunlockput(ip);
   end_op();
   ip = 0;

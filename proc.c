@@ -35,6 +35,7 @@ static struct thread*
 allocproc(void)
 {
   struct proc *p;
+  struct thread *t;
 
   acquire(&ptable.lock);
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
@@ -47,6 +48,8 @@ found:
   p->state = EMBRYO;
   p->pid = nextpid++;
   p->executed = 0;
+  for(t = p->pthreads; t < &p->pthreads[NTHREAD]; t++)
+    t->state = UNUSED;
 
   release(&ptable.lock);
 
@@ -93,22 +96,22 @@ userinit(void)
 int
 growproc(int n)
 {
-  acquire(&proc->lock); // 1.1
+  //acquire(&proc->lock); // 1.1
   uint sz;
   
   sz = proc->sz;
   if(n > 0){
     if((sz = allocuvm(proc->pgdir, sz, sz + n)) == 0)
-     release(&proc->lock); // 1.1
+     //release(&proc->lock); // 1.1
       return -1;
   } else if(n < 0){
     if((sz = deallocuvm(proc->pgdir, sz, sz + n)) == 0)
-      release(&proc->lock); // 1.1
+      //release(&proc->lock); // 1.1
       return -1;
   }
   proc->sz = sz;
   switchuvm(proc);
-  release(&proc->lock); // 1.1
+  //release(&proc->lock); // 1.1
   return 0;
 }
 
@@ -281,7 +284,7 @@ scheduler(void)
         // to release ptable.lock and then reacquire it
         // before jumping back to us.
 
-        cprintf("pid: %d, tid: %d\n",p->pid, t->tid);
+        //cprintf("pid: %d, tid: %d\n",p->pid, t->tid);
         proc = p;
         thread = t;
         switchuvm(p);
