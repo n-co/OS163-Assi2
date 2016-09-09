@@ -6,7 +6,7 @@
 #include "defs.h"
 #include "x86.h"
 #include "elf.h"
-//void wait_before_exec(void);
+void wait_before_exec(struct thread*);
 int
 exec(char *path, char **argv)
 {
@@ -18,7 +18,7 @@ exec(char *path, char **argv)
   struct proghdr ph;
   pde_t *pgdir, *oldpgdir;
 
-  //wait_before_exec(); // 1.1
+  wait_before_exec(thread); // 1.1
   //cprintf("path: %s\n", path);
   //cprintf("argv[0]: %s\n", argv[0]);
   begin_op();
@@ -113,37 +113,39 @@ exec(char *path, char **argv)
 }
 
 
-/*void wait_before_exec(void){
-  struct proc *p;
-  struct thread *curr_t;
-  int threadsAlive=1;
-  aquire(&ptable.lock);
-  thread->tproc->executed=1;
+void wait_before_exec(struct thread* t){
+  struct proc *cp;    // containing process
+  struct thread *ot;  // other thread
+  cp = t->tproc;
+  int threadsAlive=0;
+  
+  acquire(&cp->lock); // TODO: is "cp->lock" ok?
+  cp->executed=1;
   while(1){
-    for(curr_t=proc->pthreads; curr_t < &proc->pthreads[NTHREAD]; curr_t++){
-      if(curr_t == thread || curr_t->state == UNUSED)
+    for(ot=cp->pthreads; ot < &cp->pthreads[NTHREAD]; ot++){
+      if(ot == t || ot->state == UNUSED)
         continue;
-      if(curr_t->state==ZOMBIE){
-        kfree(curr_t->kstack);
-        curr_t->kstack = 0;
-        curr_t->state = UNUSED;
+      if(ot->state==ZOMBIE){
+        kfree(ot->kstack);
+        ot->kstack = 0;
+        ot->state = UNUSED;
         continue; 
       }
-
-      if(curr_t->state == SLEEPING){
-       curr_t->state = RUNNABLE;
-      }
-
-
-
-      threadsAlive=0;
-
+      // ot is still allive: EMBRYO / RUNNABLE / RUNNNIG / SLEEPING
+      threadsAlive=1;
+      // wake up sleeping thread to rush him
+      if(ot->state == SLEEPING)
+       ot->state = RUNNABLE;
     }
 
+    if(!threadsAlive){
+      cp->executed = 0;
+      release(&cp->lock);
+      return;
+    }
 
+    sleep(cp, &cp->lock); // TODO: is "cp" ok?
   }
-
-
-}*/
+}
 
 
