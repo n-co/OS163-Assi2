@@ -171,7 +171,6 @@ fork(void)
 void
 exit(void)
 {
-  panic("EXIT");
   struct proc *p;
   int fd;
 
@@ -205,6 +204,14 @@ exit(void)
     }
   }
 
+  // iterate all threads in the process and kill them
+  struct thread* t;
+  for(t = proc->pthreads; t < &proc->pthreads[NTHREAD]; t++){
+    if(t->state != UNUSED){
+      t->state = ZOMBIE;
+      t->chan = 0;
+    }
+  }
   // Jump into the scheduler, never to return.
   proc->state = ZOMBIE;
   sched();
@@ -217,6 +224,7 @@ int
 wait(void)
 {
   struct proc *p;
+  struct thread *t;
   int havekids, pid;
 
   acquire(&ptable.lock);
@@ -230,8 +238,17 @@ wait(void)
       if(p->state == ZOMBIE){
         // Found one.
         pid = p->pid;
-        //kfree(p->kstack);
-        //p->kstack = 0;
+        for(t = p->pthreads; t < &p->pthreads[NTHREAD]; t++){
+          if(t->state == UNUSED)
+            continue;
+          if(t->state == ZOMBIE){
+            kfree(t->kstack);
+            t->kstack = 0;
+            continue;
+          }
+          // t is not ZOMBIE or UNUSED, shouldnt reach here
+          panic("wait: thread is still alive while process is dead"); 
+        } 
         freevm(p->pgdir);
         p->state = UNUSED;
         p->pid = 0;
