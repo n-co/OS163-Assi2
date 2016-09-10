@@ -374,7 +374,7 @@ forkret(void)
 void
 sleep(void *chan, struct spinlock *lk)
 {
-  if(proc == 0)
+  if(proc == 0 || thread == 0)
     panic("sleep");
 
   if(lk == 0)
@@ -482,12 +482,23 @@ procdump(void)
       state = states[p->state];
     else
       state = "???";
-    cprintf("%d %s %s", p->pid, state, p->name);
-    for(t=p->pthreads; t < &p->pthreads[NTHREAD]; t++){
-      if(t->state == SLEEPING){
-        getcallerpcs((uint*)t->context->ebp+2, pc);
-        for(i=0; i<10 && pc[i] != 0; i++)
-          cprintf(" %p", pc[i]);
+    cprintf("proc: %d %s %s\n", p->pid, state, p->name);
+
+
+    for(t = p->pthreads; t < &p->pthreads[NTHREAD]; t++){
+      if(t->state == UNUSED)
+        continue;
+      if(t->state >= 0 && t->state < NELEM(states) && states[t->state])
+        state = states[t->state];
+      else
+        state = "???";
+      cprintf("%d %s %s", t->tid, state, t->name);
+      for(t=p->pthreads; t < &p->pthreads[NTHREAD]; t++){
+        if(t->state == SLEEPING){
+          getcallerpcs((uint*)t->context->ebp+2, pc);
+          for(i=0; i<10 && pc[i] != 0; i++)
+            cprintf(" %p", pc[i]);
+        }
       }
       cprintf("\n");
     }

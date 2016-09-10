@@ -84,7 +84,6 @@ int kthread_id(void){
 void kthread_exit(void){  // TODO: not sure about this implementation
   struct thread *t;
   acqptable();
-  wakeup2(thread);
   thread->state = ZOMBIE;
 
   int num_of_threads = 0;
@@ -92,11 +91,11 @@ void kthread_exit(void){  // TODO: not sure about this implementation
       if(t->state != UNUSED && t->state != ZOMBIE)
         num_of_threads++;
   }
+  wakeup2(thread);
   if(num_of_threads==0){
     relptable();
     exit();
   }
-  
   sched(); //should not return from here
   panic("zombie thread exit");
 }
@@ -148,8 +147,8 @@ static void
 wakeup2(void *chan)
 {
   struct thread *t;
-
   for(t = proc->pthreads; t < &proc->pthreads[NPROC]; t++)
-    if(t->state == SLEEPING && t->chan == chan)
+    if(t->state == SLEEPING && t->chan == chan){
       t->state = RUNNABLE;
+    }
 }
