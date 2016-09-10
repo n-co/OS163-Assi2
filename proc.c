@@ -287,12 +287,11 @@ scheduler(void)
   for(;;){
     // Enable interrupts on this processor.
     sti();
-
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-      // if(p->state != RUNNABLE)
-      //   continue;
+      //if(p->state != RUNNABLE)
+      //  continue;
 
       for(t = p->pthreads; t < &p->pthreads[NTHREAD]; t++){
         if(t->state != RUNNABLE)
@@ -493,4 +492,11 @@ procdump(void)
       cprintf("\n");
     }
   }
+}
+
+void acqptable(void){
+  acquire(&ptable.lock);
+}
+void relptable(void){
+  release(&ptable.lock);
 }

@@ -4,7 +4,6 @@
 #include "types.h"
 #include "stat.h"
 #include "user.h"
-#include "syscall.h"
 
 #define STK_SIZE 4096
 
@@ -39,13 +38,13 @@ void test1(void){
 	}
 
 	//thread was created
-	printf(1, "join = %d\n", kthread_join(tid));
+	kthread_join(tid);
 	if(tester == -1)
 		printf(1, "TEST 1.b. FAILED - kthread_join not waiting\n");
 	else
 		printf(1, "TEST 1.b. PASSED - thread #%d joined with #%d\n", tid, new_tid);
 	if(tester == 1)
-		printf(1, "TEST 1.c PASSED - thread exit with kthread_exit()\n");
+		printf(1, "TEST 1.c. PASSED - thread exit with kthread_exit()\n");
 
 	printf(1, "test 1 - end\n");
 	kthread_exit();

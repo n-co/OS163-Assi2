@@ -118,6 +118,8 @@ void            userinit(void);
 int             wait(void);
 void            wakeup(void*);
 void            yield(void);
+void acqptable(void);
+void relptable(void);
 
 // kthread.c
 struct thread*	allocthread(struct proc *);

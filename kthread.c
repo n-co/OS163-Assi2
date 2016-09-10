@@ -83,7 +83,7 @@ int kthread_id(void){
 
 void kthread_exit(void){  // TODO: not sure about this implementation
   struct thread *t;
-  
+  acqptable();
   wakeup2(thread);
   thread->state = ZOMBIE;
 
@@ -93,16 +93,20 @@ void kthread_exit(void){  // TODO: not sure about this implementation
         num_of_threads++;
   }
   if(num_of_threads==0){
+    relptable();
     exit();
   }
+  
+  sched(); //should not return from here
+  panic("zombie thread exit");
 }
 
 int kthread_join(int thread_id){
   struct thread *t;
   acquire(&proc->lock);
   for(t = proc->pthreads; t < &proc->pthreads[NTHREAD]; t++)
-    if(t->tid != thread_id)
-      continue;
+    if(t->tid == thread_id)
+      break;
   if(t == &proc->pthreads[NTHREAD]){
     // thread_id not found 
     release(&proc->lock);
@@ -122,8 +126,9 @@ int kthread_join(int thread_id){
   }
   
   else{ // RUNNABLE / RUNNING / EMBRYO etc
-    while(t->state != ZOMBIE)
+    while(t->state != ZOMBIE){
       sleep(t, &proc->lock);
+    }
 
     if(t->state == UNUSED)
       panic("kthread_join: thread become unused");
