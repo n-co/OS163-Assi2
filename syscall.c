@@ -103,6 +103,11 @@ extern int sys_kthread_create(void);
 extern int sys_kthread_id(void);
 extern int sys_kthread_exit(void);
 extern int sys_kthread_join(void);
+// mutex system calls
+extern int sys_kthread_mutex_alloc(void);
+extern int sys_kthread_mutex_dealloc(void);
+extern int sys_kthread_mutex_lock(void);
+extern int sys_kthread_mutex_unlock(void);
 
 
 static int (*syscalls[])(void) = {
@@ -128,10 +133,15 @@ static int (*syscalls[])(void) = {
 [SYS_mkdir]   sys_mkdir,
 [SYS_close]   sys_close,
 // threads system calls
-[SYS_kthread_create]  sys_kthread_create,
-[SYS_kthread_id]      sys_kthread_id,
-[SYS_kthread_exit]    sys_kthread_exit,
-[SYS_kthread_join]    sys_kthread_join,
+[SYS_kthread_create]        sys_kthread_create,
+[SYS_kthread_id]            sys_kthread_id,
+[SYS_kthread_exit]          sys_kthread_exit,
+[SYS_kthread_join]          sys_kthread_join,
+// mutex system calls
+[SYS_kthread_mutex_alloc]   sys_kthread_mutex_alloc,
+[SYS_kthread_mutex_dealloc] sys_kthread_mutex_dealloc,
+[SYS_kthread_mutex_lock]    sys_kthread_mutex_lock,
+[SYS_kthread_mutex_unlock]  sys_kthread_mutex_unlock,
 };
 
 void

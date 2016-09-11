@@ -4,6 +4,7 @@
 #include "memlayout.h"
 #include "mmu.h"
 #include "proc.h"
+#include "mutex.h"
 #include "x86.h"
 
 static void startothers(void);
@@ -28,6 +29,7 @@ main(void)
   consoleinit();   // I/O devices & their interrupts
   uartinit();      // serial port
   pinit();         // process table
+  mxinit();        // 2.1
   tvinit();        // trap vectors
   binit();         // buffer cache
   fileinit();      // file table

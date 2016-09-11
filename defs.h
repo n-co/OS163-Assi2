@@ -118,8 +118,8 @@ void            userinit(void);
 int             wait(void);
 void            wakeup(void*);
 void            yield(void);
-void acqptable(void);
-void relptable(void);
+void 			acqptable(void);
+void 			relptable(void);
 
 // kthread.c
 struct thread*	allocthread(struct proc *);
@@ -127,6 +127,13 @@ int 			kthread_create(void*(*start_func)(), void* stack, int stack_size);
 int 			kthread_id(void);
 void 			kthread_exit(void);
 int 			kthread_join(int);
+
+// mutex.c
+void 			mxinit(void);
+int 			kthread_mutex_alloc();
+int 			kthread_mutex_dealloc(int mutex_id);
+int 			kthread_mutex_lock(int mutex_id);
+int 			kthread_mutex_unlock(int mutex_id);
 
 // swtch.S
 void            swtch(struct context**, struct context*);

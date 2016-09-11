@@ -327,8 +327,10 @@ sched(void)
 
   if(!holding(&ptable.lock))
     panic("sched ptable.lock");
-  if(cpu->ncli != 1)
+  if(cpu->ncli != 1){
+    cprintf("cpu->ncli: %d\n", cpu->ncli);
     panic("sched locks");
+  }
   if(proc->state == RUNNING)
     panic("sched running");
   if(readeflags()&FL_IF)
@@ -436,16 +438,14 @@ wakeup(void *chan)
 int
 kill(int pid)
 {
-  panic("KILL");
   struct proc *p;
-
   acquire(&ptable.lock);
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if(p->pid == pid){
       p->killed = 1;
       // Wake process from sleep if necessary.
-      if(p->state == SLEEPING)
-        p->state = RUNNABLE;
+      //if(p->state == SLEEPING)
+      //  p->state = RUNNABLE;
       release(&ptable.lock);
       return 0;
     }

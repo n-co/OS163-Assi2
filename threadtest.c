@@ -8,7 +8,7 @@
 #define STK_SIZE 4096
 
 void test1(void);
-void* test1_threadfunc();
+//void* test1_threadfunc();
 void test2(void);
 void* test2_threadfunc();
 
@@ -52,7 +52,7 @@ int main(void){
 }
 
 void test1(void){
-	void *stack1 = malloc(STK_SIZE);	
+	/*void *stack1 = malloc(STK_SIZE);	
 	void *stack2 = malloc(STK_SIZE);	
 	void *stack3 = malloc(STK_SIZE);	
 
@@ -61,9 +61,9 @@ void test1(void){
 	kthread_create(test1_threadfunc, stack3, STK_SIZE);
 	printf(1,"HELLO!\n");
 	char *_args[3] = {"ls", 0};
-	exec(_args[0], _args);	
+	exec(_args[0], _args);	*/
 }
-
+/*
 void* test1_threadfunc(){
 	while(1){
 		printf(1,"looping\n");
@@ -71,7 +71,7 @@ void* test1_threadfunc(){
 	}
 
 	exit();
-}
+}*/
 
 void test2(void){
 	tester2 = -1;

@@ -32,3 +32,31 @@ int sys_kthread_join(void){
     return -1;
   return kthread_join(tid);
 }
+
+
+// mutex system calls
+
+int sys_kthread_mutex_alloc(void){
+  return kthread_mutex_alloc();
+}
+
+int sys_kthread_mutex_dealloc(void){
+  int mxid;
+  if(argint(0, &mxid) < 0)
+    return -1;
+  return kthread_mutex_dealloc(mxid);
+}
+
+int sys_kthread_mutex_lock(void){
+  int mxid;
+  if(argint(0, &mxid) < 0)
+    return -1;
+  return kthread_mutex_lock(mxid);
+}
+
+int sys_kthread_mutex_unlock(void){
+  int mxid;
+  if(argint(0, &mxid) < 0)
+    return -1;
+  return kthread_mutex_unlock(mxid);
+}
