@@ -93,7 +93,7 @@ int kthread_mutex_unlock(int mutex_id){
 	return -1;
   	
   	found: 
-  		if(mx->state == UNLOCKED || mx->owner != thread){
+  		if(mx->state == UNLOCKED/* || mx->owner != thread*/){
 	  	  	release(&mxtable.lock);
 			return -1;
   		}
