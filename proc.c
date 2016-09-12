@@ -483,7 +483,7 @@ procdump(void)
     else
       state = "???";
     cprintf("proc: %d %s %s\n", p->pid, state, p->name);
-
+    print_memory_usage(proc->pgdir);
 
     for(t = p->pthreads; t < &p->pthreads[NTHREAD]; t++){
       if(t->state == UNUSED)
@@ -492,7 +492,7 @@ procdump(void)
         state = states[t->state];
       else
         state = "???";
-      cprintf("%d %s %s", t->tid, state, t->name);
+      cprintf("thread: %d %s %s", t->tid, state, t->name);
       for(t=p->pthreads; t < &p->pthreads[NTHREAD]; t++){
         if(t->state == SLEEPING){
           getcallerpcs((uint*)t->context->ebp+2, pc);
@@ -510,4 +510,30 @@ void acqptable(void){
 }
 void relptable(void){
   release(&ptable.lock);
+}
+
+
+#define VPN ((dir<<10) + table)
+#define PPN (pgtab[table] >> 12)
+void print_memory_usage(pde_t* pgdir){
+
+  int dir;
+  int table;
+  pde_t *pgtab;
+  char writeable;
+  for(dir = 0; dir<1024; dir++){
+   
+    pgtab = (pde_t*)pgdir[dir];
+    if((int)pgtab & PTE_U){
+      for(table = 0; table<1024; table++){
+        
+        if(pgtab[table] & PTE_U){
+          if(pgtab[table] & PTE_W)  writeable = 'y';
+          else                      writeable = 'n';
+          cprintf("%d -> %d , %c\n", VPN, PPN, writeable);
+        }
+      }
+    }
+  }
+
 }

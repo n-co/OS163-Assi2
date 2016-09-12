@@ -143,7 +143,7 @@ int main(int argc, char *argv[]){
 	kthread_mutex_dealloc(print_mx);
 	free(soldiers);
 	kthread_exit();
-	exit();
+	return 0;
 }
 
 void* soldier_func(){

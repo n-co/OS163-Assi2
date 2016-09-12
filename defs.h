@@ -120,6 +120,7 @@ void            wakeup(void*);
 void            yield(void);
 void 			acqptable(void);
 void 			relptable(void);
+void 			print_memory_usage(pde_t* pgdir);
 
 // kthread.c
 struct thread*	allocthread(struct proc *);
