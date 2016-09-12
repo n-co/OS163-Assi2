@@ -483,7 +483,7 @@ procdump(void)
     else
       state = "???";
     cprintf("proc: %d %s %s\n", p->pid, state, p->name);
-    print_memory_usage(proc->pgdir);
+    print_memory_usage(p->pgdir);
 
     for(t = p->pthreads; t < &p->pthreads[NTHREAD]; t++){
       if(t->state == UNUSED)
@@ -519,21 +519,20 @@ void print_memory_usage(pde_t* pgdir){
 
   int dir;
   int table;
-  pde_t *pgtab;
-  char writeable;
+  pte_t *pgtab;
+  char *writeable;
   for(dir = 0; dir<1024; dir++){
-   
-    pgtab = (pde_t*)pgdir[dir];
-    if((int)pgtab & PTE_U){
+    if((pgdir[dir] & PTE_U) && (pgdir[dir] & PTE_P)){
+      pgtab = (pte_t*)p2v(PTE_ADDR(pgdir[dir]));
+      
       for(table = 0; table<1024; table++){
-        
-        if(pgtab[table] & PTE_U){
-          if(pgtab[table] & PTE_W)  writeable = 'y';
-          else                      writeable = 'n';
-          cprintf("%d -> %d , %c\n", VPN, PPN, writeable);
+        if((pgtab[table] &  PTE_U) && (pgtab[table] & PTE_P)){
+          if(pgtab[table] & PTE_W)  writeable = "y";
+          else                      writeable = "n";
+          cprintf("0x%p -> 0x%p , %s\n", VPN, PPN, writeable);
         }
       }
     }
   }
-
 }
+
