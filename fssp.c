@@ -10,9 +10,18 @@ typedef struct{
 	int index;
 	void* stack;
 } soldier;
+
+typedef struct {
+	int pre_mx; 	// mutex of eneting the barrier
+	int post_mx;	// mutex of exiting the barrier
+	int counter;
+	int limit;
+} barrier;
+
+barrier time_barrier;
 static soldier *soldiers;
 static int num_of_soldiers;
-static int mutex;
+static int print_mx;
 
 //states
 #define NUM_OF_STATES 6
@@ -24,6 +33,7 @@ static int mutex;
 #define M	4
 #define X	5	// no neigbour
 #define F 	10	// fire
+#define GENERAL soldiers[0]
 
 //					 [curr_state]     [left_state]   [right_state]
 static int trans_func[NUM_OF_STATES-1][NUM_OF_STATES][NUM_OF_STATES] =
@@ -45,7 +55,7 @@ static int trans_func[NUM_OF_STATES-1][NUM_OF_STATES][NUM_OF_STATES] =
 		{R, Z, Z, B, B, Z},
 		{R, Z, B, Z, B, Z},
 		{B, B, B, B, B, B},
-		{Z, B, Z, Z, B, B}
+		{Z, B, Z, Z, B, F}
 	},
 
 	// R
@@ -79,15 +89,6 @@ static int trans_func[NUM_OF_STATES-1][NUM_OF_STATES][NUM_OF_STATES] =
 	}
 };
 
-typedef struct {
-	int pre_mutex;
-	int post_mutex;
-	int counter;
-	int limit;
-} barrier;
-
-barrier time_barrier;
-
 void* soldier_func();
 void inc_barrier(barrier* b);
 void init_barrier(barrier *b, int limit);
@@ -106,16 +107,15 @@ int main(int argc, char *argv[]){
 		exit();		
 	}
 
-	mutex = kthread_mutex_alloc();
-	kthread_mutex_lock(mutex);
+	print_mx = kthread_mutex_alloc();
+	kthread_mutex_lock(print_mx);
 	printf(1, "num of soldiers: %d\n", num_of_soldiers);
-	kthread_mutex_unlock(mutex);
+	kthread_mutex_unlock(print_mx);
 
 	// initialize
 	soldiers = malloc(sizeof(soldier)*num_of_soldiers);
 
-	//kthread_mutex_lock(mutex);
-	init_barrier(&time_barrier, num_of_soldiers);	
+	init_barrier(&time_barrier, num_of_soldiers+1);	
 	int i;
 	for(i=0; i<num_of_soldiers; i++){
 		soldiers[i].state = Q;						// initial state
@@ -123,29 +123,34 @@ int main(int argc, char *argv[]){
 		soldiers[i].tid = kthread_create(soldier_func, soldiers[i].stack, STK_SIZE);
 		soldiers[i].index = i;
 	}
-	soldiers[0].state = P; // the general
-	print_soldiers_state();
-	//kthread_mutex_lock(mutex);
+	GENERAL.state = P;
+	print_soldiers_state(); 			// first print
+	inc_barrier(&time_barrier);			// wait for all threads to start
+	while(GENERAL.state != F){
+		inc_barrier(&time_barrier);		// wait for all thread to calculate their next_state
+		inc_barrier(&time_barrier);		// wait for all thread to update their next_state
+		print_soldiers_state();			// print after change
+	}
+
 
 	
 	// free before exit
-	//kthread_mutex_dealloc(mutex);
 	for(i=0; i<num_of_soldiers; i++){
 		kthread_join(soldiers[i].tid);
 		free(soldiers[i].stack);
 	}
 	kill_barrier(&time_barrier);
-	kthread_mutex_dealloc(mutex);
+	kthread_mutex_dealloc(print_mx);
 	free(soldiers);
 	kthread_exit();
 	exit();
 }
 
 void* soldier_func(){
-	//printf(1, "SOLDIER FUNC\n");
-	//sleep(500);
+
 	inc_barrier(&time_barrier); 		// wait for all threads to start
 
+	// find the index according to thread_id
 	int index=-1, i;
 	int tid = kthread_id();
 	for(i=0; i<num_of_soldiers; i++){
@@ -158,9 +163,7 @@ void* soldier_func(){
 		printf(1, "ERROR: worng index\n");
 		kthread_exit();
 	}
-	//kthread_mutex_lock(mutex);	
-	//printf(1, "tid: #%d - index: %d\n", tid, index);
-	//kthread_mutex_unlock(mutex);
+
 	// function body goes here
 
 	while(soldiers[index].state != F){
@@ -184,61 +187,56 @@ void* soldier_func(){
 		soldiers[index].state = next_state;
 
 		inc_barrier(&time_barrier);	// wait for all thread to update their state
-
-		if(index == 0){
-			kthread_mutex_lock(mutex);
-			print_soldiers_state();
-			kthread_mutex_unlock(mutex);
-		}
 	}
 
 	kthread_exit();
 	return 0;
 }
 void init_barrier(barrier *b, int limit){
-	b->pre_mutex = kthread_mutex_alloc();
-	b->post_mutex = kthread_mutex_alloc();
+	b->pre_mx = kthread_mutex_alloc();
+	b->post_mx = kthread_mutex_alloc();
 	b->limit = limit;
 	b->counter = 0;
-	kthread_mutex_lock(b->post_mutex);	
+	kthread_mutex_lock(b->post_mx);	
 }
 
 void kill_barrier(barrier *b){
-	kthread_mutex_dealloc(b->pre_mutex);
-	kthread_mutex_dealloc(b->post_mutex);
+	kthread_mutex_dealloc(b->pre_mx);
+	kthread_mutex_dealloc(b->post_mx);
 	b->limit = 0;
 	b->counter = 0;
 }
 
 void inc_barrier(barrier* b){
-	kthread_mutex_lock(b->pre_mutex);
+	kthread_mutex_lock(b->pre_mx);
 	b->counter++;
 	if(b->limit > b->counter)
-		kthread_mutex_unlock(b->pre_mutex);	
+		kthread_mutex_unlock(b->pre_mx);	
 	else // limit == counter
-		kthread_mutex_unlock(b->post_mutex);			
+		kthread_mutex_unlock(b->post_mx);			
 	
-	kthread_mutex_lock(b->post_mutex);
+	kthread_mutex_lock(b->post_mx);
 	b->counter--;
 	if(b->counter > 0)
-		kthread_mutex_unlock(b->post_mutex);
+		kthread_mutex_unlock(b->post_mx);
 	else // counter == 0
-		kthread_mutex_unlock(b->pre_mutex);
+		kthread_mutex_unlock(b->pre_mx);
 }
 
 void print_soldiers_state(){
+	kthread_mutex_lock(print_mx);
 	int i;
 	for(i = 0; i < num_of_soldiers; i++){
 		switch(soldiers[i].state){
-			case Q: printf(1,"Q"); break;
-			case P: printf(1,"P"); break;
-			case R: printf(1,"R"); break;
-			case Z: printf(1,"Z"); break;
-			case M: printf(1,"M"); break;
-			case F: printf(1,"F"); break;
+			case Q:  printf(1,"Q"); break;
+			case P:  printf(1,"P"); break;
+			case R:  printf(1,"R"); break;
+			case Z:  printf(1,"Z"); break;
+			case M:  printf(1,"M"); break;
+			case F:  printf(1,"F"); break;
 			default: printf(1," "); break;
 		}
 	}
 	printf(1,"\n");
-
+	kthread_mutex_unlock(print_mx);
 }
