@@ -165,14 +165,10 @@ fork(void)
   return pid;
 }
 
-
-
-
-
-
 int
 cow_fork(void)
 {
+  cprintf("COW FORK!!!!!!!!!!!\n");
   int i, pid;
   struct thread *nt;
   struct proc *np;
@@ -184,7 +180,7 @@ cow_fork(void)
   np = nt->tproc;
 
   // Copy process state from p.
-  if((np->pgdir = cow_mapuvm(proc->pgdir, proc->sz)) == 0){
+  if((np->pgdir = cow_shareuvm(proc->pgdir, proc->sz)) == 0){
     kfree(nt->kstack);
     nt->kstack = 0;
     nt->state = UNUSED;
@@ -307,6 +303,56 @@ wait(void)
           panic("wait: thread is still alive while process is dead"); 
         } 
         freevm(p->pgdir);
+        p->state = UNUSED;
+        p->pid = 0;
+        p->parent = 0;
+        p->name[0] = 0;
+        p->killed = 0;
+        release(&ptable.lock);
+        return pid;
+      }
+    }
+    // No point waiting if we don't have any children.
+    if(!havekids || proc->killed){
+      release(&ptable.lock);
+      return -1;
+    }
+
+    // Wait for children to exit.  (See wakeup1 call in proc_exit.)
+    sleep(proc, &ptable.lock);  //DOC: wait-sleep
+  }
+}
+
+int
+cow_wait(void)
+{
+  struct proc *p;
+  struct thread *t;
+  int havekids, pid;
+
+  acquire(&ptable.lock);
+  for(;;){
+    // Scan through table looking for zombie children.
+    havekids = 0;
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      if(p->parent != proc)
+        continue;
+      havekids = 1;
+      if(p->state == ZOMBIE){
+        // Found one.
+        pid = p->pid;
+        for(t = p->pthreads; t < &p->pthreads[NTHREAD]; t++){
+          if(t->state == UNUSED)
+            continue;
+          if(t->state == ZOMBIE){
+            kfree(t->kstack);
+            t->kstack = 0;
+            continue;
+          }
+          // t is not ZOMBIE or UNUSED, shouldnt reach here
+          panic("wait: thread is still alive while process is dead"); 
+        } 
+        cow_freevm(p->pgdir);
         p->state = UNUSED;
         p->pid = 0;
         p->parent = 0;
@@ -570,22 +616,23 @@ void relptable(void){
 }
 
 
-#define VPN ((dir<<10) + table)
-#define PPN (pgtab[table] >> 12)
+#define VPN ((d<<10) + t)
+#define PPN (pgtab[t] >> 12)
 void print_memory_usage(pde_t* pgdir){
 
-  int dir;
-  int table;
+  int d,t;
   pte_t *pgtab;
   char *writeable;
-  for(dir = 0; dir<1024; dir++){
-    if((pgdir[dir] & PTE_U) && (pgdir[dir] & PTE_P)){
-      pgtab = (pte_t*)p2v(PTE_ADDR(pgdir[dir]));
+  for(d = 0; d<1024; d++){
+    if((pgdir[d] & PTE_U) && (pgdir[d] & PTE_P)){
+      pgtab = (pte_t*)p2v(PTE_ADDR(pgdir[d]));
       
-      for(table = 0; table<1024; table++){
-        if((pgtab[table] &  PTE_U) && (pgtab[table] & PTE_P)){
-          if(pgtab[table] & PTE_W)  writeable = "y";
-          else                      writeable = "n";
+      for(t = 0; t<1024; t++){
+        if((pgtab[t] & PTE_U) && (pgtab[t] & PTE_P)){
+          if((pgtab[t] & PTE_W) && !(pgtab[t] & PTE_SH))
+            writeable = "y";
+          else
+            writeable = "n";
           cprintf("%p -> %p , %s\n", VPN, PPN, writeable);
         }
       }

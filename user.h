@@ -33,9 +33,10 @@ int	kthread_mutex_alloc(void);
 int	kthread_mutex_dealloc(int mutex_id);
 int	kthread_mutex_lock(int mutex_id);
 int	kthread_mutex_unlock(int mutex_id);
-//cow system calls
+// cow system calls
 int cow_fork(void);
-
+int cow_wait(void);
+void procdump(void);
 
 // ulib.c
 int stat(char*, struct stat*);

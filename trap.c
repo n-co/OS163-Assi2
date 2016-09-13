@@ -36,6 +36,7 @@ idtinit(void)
 void
 trap(struct trapframe *tf)
 {
+
   if(tf->trapno == T_SYSCALL){
     if(proc->killed || proc->executed)    //@ proc or thread?
       exit();
@@ -77,6 +78,16 @@ trap(struct trapframe *tf)
             cpu->id, tf->cs, tf->eip);
     lapiceoi();
     break;
+
+  case T_PGFLT:
+    //thread->tf = tf;
+    if(cow_copyuvm(proc->pgdir) != 0){
+      //thread->tf = tf; //TODO: check if needed
+      break;
+    }
+    //else
+      //panic("COW == 0");
+
    
   //PAGEBREAK: 13
   default:

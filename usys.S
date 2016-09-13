@@ -41,4 +41,6 @@ SYSCALL(kthread_mutex_lock)
 SYSCALL(kthread_mutex_unlock)
 
 SYSCALL(cow_fork)
+SYSCALL(cow_wait)
 
+SYSCALL(procdump)

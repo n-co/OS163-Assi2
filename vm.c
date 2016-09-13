@@ -13,7 +13,7 @@ struct segdesc gdt[NSEGS];
 
 static int page_counters[60*1024];    // 3.2 240 MB
 struct spinlock pg_count_lock;        // 3.2 lock
-#define PA_INX(pa) (pa>>12)           //3.2
+#define PA_INX(pa) (pa>>12)          //3.2
  
 // Set up CPU's kernel segment descriptors.
 // Run once on entry on each CPU.
@@ -275,6 +275,38 @@ deallocuvm(pde_t *pgdir, uint oldsz, uint newsz)
   return newsz;
 }
 
+
+int
+cow_deallocuvm(pde_t *pgdir, uint oldsz, uint newsz)
+{
+  pte_t *pte;
+  uint a, pa;
+
+  if(newsz >= oldsz)
+    return oldsz;
+
+  a = PGROUNDUP(newsz);
+  acquire(&pg_count_lock);
+  for(; a  < oldsz; a += PGSIZE){
+    pte = walkpgdir(pgdir, (char*)a, 0);
+    if(!pte)
+      a += (NPTENTRIES - 1) * PGSIZE;
+    else if((*pte & PTE_P) != 0){
+      pa = PTE_ADDR(*pte);
+      if(pa == 0)
+        panic("kfree");
+      page_counters[PA_INX(pa)]--;
+      if(page_counters[PA_INX(pa)] == 0){
+        char *v = p2v(pa);
+        kfree(v);
+      }
+      *pte = 0;
+    }
+  }
+  release(&pg_count_lock);
+  return newsz;
+}
+
 // Free a page table and all the physical memory pages
 // in the user part.
 void
@@ -294,6 +326,25 @@ freevm(pde_t *pgdir)
   kfree((char*)pgdir);
 }
 
+
+void
+cow_freevm(pde_t *pgdir)
+{
+  uint i;
+
+  if(pgdir == 0)
+    panic("freevm: no pgdir");
+  cow_deallocuvm(pgdir, KERNBASE, 0);
+  for(i = 0; i < NPDENTRIES; i++){
+    if(pgdir[i] & PTE_P){
+      char * v = p2v(PTE_ADDR(pgdir[i]));
+      kfree(v);
+    }
+  }
+  kfree((char*)pgdir);
+}
+
+
 // Clear PTE_U on a page. Used to create an inaccessible
 // page beneath the user stack.
 void
@@ -309,7 +360,7 @@ clearpteu(pde_t *pgdir, char *uva)
 
 // Given a parent process's page table, create a copy
 // of it for a child.
-pde_t*
+pte_t*
 copyuvm(pde_t *pgdir, uint sz)
 {
   pde_t *d;
@@ -341,7 +392,7 @@ bad:
 
 //3.2 just the mappping part from copyuvm
 pde_t*
-cow_mapuvm(pde_t *pgdir, uint sz)
+cow_shareuvm(pde_t *pgdir, uint sz)
 {
   pde_t *d;
   pte_t *pte;
@@ -349,35 +400,94 @@ cow_mapuvm(pde_t *pgdir, uint sz)
 
   if((d = setupkvm()) == 0)
     return 0;
+  acquire(&pg_count_lock);
   for(i = 0; i < sz; i += PGSIZE){
     if((pte = walkpgdir(pgdir, (void *) i, 0)) == 0)
       panic("copyuvm: pte should exist");
     if(!(*pte & PTE_P))
       panic("copyuvm: page not present");
+    *pte |= PTE_SH;
+    *pte &= ~PTE_W;
     pa = PTE_ADDR(*pte);
     flags = PTE_FLAGS(*pte);
     if(mappages(d, (void*)i, PGSIZE, pa, flags) < 0) // already have the pa
       goto bad;
     //inc the counter
-    acquire(&pg_count_lock);
     inc_counter(pa);
-    release(&pg_count_lock);
   }
-  //TODO
-  lcr3(v2p(proc->pgdir));
+  release(&pg_count_lock);  
+  switchuvm(proc);
   return d;
 
 bad:
+  release(&pg_count_lock);  
   freevm(d);
   return 0;
 }
 
+// after page fault - copy to writable page
+uint*
+cow_copyuvm(pde_t *pgdir)
+{
+  pte_t *pte;
+  uint pa, flags;
+  uint faulty_address;
+  char *mem;
+
+  acquire(&pg_count_lock);
+  faulty_address = rcr2(); // virtual address in a read-only page  
+
+  if((pte = walkpgdir(pgdir, (void*)faulty_address, 0)) == 0)
+    panic("cow_copyuvm: pte should exist");
+  pa = PTE_ADDR(*pte);
+  flags = PTE_FLAGS(*pte);
+
+  // is the page fault is real?
+  /*if(!(flags & PTE_W)){
+    panic("NOT writable");
+    goto bad;
+  }*/
+  /*if(!(flags & PTE_SH)){
+    panic("NOT SHAREABLE");
+    goto bad;
+  }*/
+ 
+  if (faulty_address < proc->sz) {
+
+    if(page_counters[PA_INX(pa)] > 1){
+      if((mem = kalloc()) == 0){
+        goto bad;
+      }
+      memmove(mem, (char*)p2v(pa), PGSIZE);
+
+      *pte = v2p(mem) | flags;
+      *pte &= ~PTE_SH;
+      *pte |= PTE_W;
+      // update the page counter
+      page_counters[PA_INX(pa)]--;
+    }
+    else{
+      // this is the only process that holds the page 
+      // no need to copy it, only change to not-shared
+      *pte &= ~PTE_SH;
+      *pte |= PTE_W;
+    }
+    release(&pg_count_lock);
+    switchuvm(proc);
+    return pte;
+  }
+
+bad:
+  release(&pg_count_lock);
+  return 0;
+}
 
 void 
 inc_counter(uint pa){
-    if(page_counters[PA_INX(pa)]==0)
-      page_counters[PA_INX(pa)]=2;
-    else  page_counters[PA_INX(pa)]++;
+  if(page_counters[PA_INX(pa)]==0)
+    page_counters[PA_INX(pa)]=2;
+  else
+    page_counters[PA_INX(pa)]++;
 }
 
 

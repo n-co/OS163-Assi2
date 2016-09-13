@@ -122,6 +122,7 @@ void 			acqptable(void);
 void 			relptable(void);
 void 			print_memory_usage(pde_t* pgdir);
 int             cow_fork(void);
+int             cow_wait(void);
 
 
 // kthread.c
@@ -197,7 +198,11 @@ void            switchuvm(struct proc*);
 void            switchkvm(void);
 int             copyout(pde_t*, uint, void*, uint);
 void            clearpteu(pde_t *pgdir, char *uva);
-pde_t*          cow_mapuvm(pde_t*, uint); // 3.2
+// cow functions
+pde_t*          cow_shareuvm(pde_t*, uint); // 3.2
+int          	cow_deallocuvm(pde_t *pgdir, uint oldsz, uint newsz); // 3.2
+void          	cow_freevm(pde_t *pgdir); // 3.2
+uint*			cow_copyuvm(pde_t *pgdir); // 3.2
 void          	inc_counter(uint pa); // 3.2
 
 // number of elements in fixed-size array

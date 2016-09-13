@@ -95,3 +95,14 @@ sys_cow_fork(void)
 {
   return cow_fork();
 }
+
+int
+sys_cow_wait(void)
+{
+  return cow_wait();
+}
+
+int sys_procdump(void){
+  procdump();
+  return 0;
+}
