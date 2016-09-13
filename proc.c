@@ -165,6 +165,63 @@ fork(void)
   return pid;
 }
 
+
+
+
+
+
+int
+cow_fork(void)
+{
+  int i, pid;
+  struct thread *nt;
+  struct proc *np;
+
+  // Allocate process.
+  if((nt = allocproc()) == 0)
+    return -1;
+
+  np = nt->tproc;
+
+  // Copy process state from p.
+  if((np->pgdir = cow_mapuvm(proc->pgdir, proc->sz)) == 0){
+    kfree(nt->kstack);
+    nt->kstack = 0;
+    nt->state = UNUSED;
+    np->state = UNUSED;
+    return -1;
+  }
+  np->sz = proc->sz;
+  np->parent = proc;
+
+  *nt->tf = *thread->tf;
+
+  // Clear %eax so that fork returns 0 in the child.
+  nt->tf->eax = 0;
+
+  for(i = 0; i < NOFILE; i++)
+    if(proc->ofile[i])
+      np->ofile[i] = filedup(proc->ofile[i]);
+  np->cwd = idup(proc->cwd);
+
+  safestrcpy(np->name, proc->name, sizeof(proc->name));
+ 
+  pid = np->pid;
+
+  // lock to force the compiler to emit the np->state write last.
+  acquire(&ptable.lock);
+  np->state = RUNNABLE;
+  nt->state = RUNNABLE;
+  release(&ptable.lock);
+  
+  return pid;
+
+}
+
+
+
+
+
 // Exit the current process.  Does not return.
 // An exited process remains in the zombie state
 // until its parent calls wait() to find out it exited.
@@ -529,7 +586,7 @@ void print_memory_usage(pde_t* pgdir){
         if((pgtab[table] &  PTE_U) && (pgtab[table] & PTE_P)){
           if(pgtab[table] & PTE_W)  writeable = "y";
           else                      writeable = "n";
-          cprintf("0x%p -> 0x%p , %s\n", VPN, PPN, writeable);
+          cprintf("%p -> %p , %s\n", VPN, PPN, writeable);
         }
       }
     }

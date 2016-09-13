@@ -11,13 +11,17 @@ extern char data[];  // defined by kernel.ld
 pde_t *kpgdir;  // for use in scheduler()
 struct segdesc gdt[NSEGS];
 
+static int page_counters[60*1024];    // 3.2 240 MB
+struct spinlock pg_count_lock;        // 3.2 lock
+#define PA_INX(pa) (pa>>12)           //3.2
+ 
 // Set up CPU's kernel segment descriptors.
 // Run once on entry on each CPU.
 void
 seginit(void)
 {
   struct cpu *c;
-
+  initlock(&pg_count_lock,"counter_lock"); //3.2 init counter lock
   // Map "logical" addresses to virtual addresses using identity map.
   // Cannot share a CODE descriptor for both kernel and user
   // because it would have to have DPL_USR, but the CPU forbids
@@ -334,6 +338,48 @@ bad:
   freevm(d);
   return 0;
 }
+
+//3.2 just the mappping part from copyuvm
+pde_t*
+cow_mapuvm(pde_t *pgdir, uint sz)
+{
+  pde_t *d;
+  pte_t *pte;
+  uint pa, i, flags;
+
+  if((d = setupkvm()) == 0)
+    return 0;
+  for(i = 0; i < sz; i += PGSIZE){
+    if((pte = walkpgdir(pgdir, (void *) i, 0)) == 0)
+      panic("copyuvm: pte should exist");
+    if(!(*pte & PTE_P))
+      panic("copyuvm: page not present");
+    pa = PTE_ADDR(*pte);
+    flags = PTE_FLAGS(*pte);
+    if(mappages(d, (void*)i, PGSIZE, pa, flags) < 0) // already have the pa
+      goto bad;
+    //inc the counter
+    acquire(&pg_count_lock);
+    inc_counter(pa);
+    release(&pg_count_lock);
+  }
+  //TODO
+  lcr3(v2p(proc->pgdir));
+  return d;
+
+bad:
+  freevm(d);
+  return 0;
+}
+
+
+void 
+inc_counter(uint pa){
+    if(page_counters[PA_INX(pa)]==0)
+      page_counters[PA_INX(pa)]=2;
+    else  page_counters[PA_INX(pa)]++;
+}
+
 
 //PAGEBREAK!
 // Map user virtual address to kernel address.

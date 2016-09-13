@@ -32,3 +32,6 @@
 #define SYS_kthread_mutex_dealloc	27
 #define SYS_kthread_mutex_lock		28
 #define SYS_kthread_mutex_unlock	29
+
+//cow system calls
+#define SYS_cow_fork	30

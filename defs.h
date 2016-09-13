@@ -121,6 +121,8 @@ void            yield(void);
 void 			acqptable(void);
 void 			relptable(void);
 void 			print_memory_usage(pde_t* pgdir);
+int             cow_fork(void);
+
 
 // kthread.c
 struct thread*	allocthread(struct proc *);
@@ -195,6 +197,8 @@ void            switchuvm(struct proc*);
 void            switchkvm(void);
 int             copyout(pde_t*, uint, void*, uint);
 void            clearpteu(pde_t *pgdir, char *uva);
+pde_t*          cow_mapuvm(pde_t*, uint); // 3.2
+void          	inc_counter(uint pa); // 3.2
 
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))

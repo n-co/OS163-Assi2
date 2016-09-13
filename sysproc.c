@@ -89,3 +89,9 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+int
+sys_cow_fork(void)
+{
+  return cow_fork();
+}
