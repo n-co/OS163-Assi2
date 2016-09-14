@@ -204,6 +204,7 @@ int          	cow_deallocuvm(pde_t *pgdir, uint oldsz, uint newsz); // 3.2
 void          	cow_freevm(pde_t *pgdir); // 3.2
 uint*			cow_copyuvm(pde_t *pgdir); // 3.2
 void          	inc_counter(uint pa); // 3.2
+int 			page_refs(uint ppn);
 
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))

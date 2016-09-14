@@ -168,7 +168,6 @@ fork(void)
 int
 cow_fork(void)
 {
-  cprintf("COW FORK!!!!!!!!!!!\n");
   int i, pid;
   struct thread *nt;
   struct proc *np;
@@ -615,7 +614,6 @@ void relptable(void){
   release(&ptable.lock);
 }
 
-
 #define VPN ((d<<10) + t)
 #define PPN (pgtab[t] >> 12)
 void print_memory_usage(pde_t* pgdir){
@@ -623,6 +621,7 @@ void print_memory_usage(pde_t* pgdir){
   int d,t;
   pte_t *pgtab;
   char *writeable;
+  int refs;
   for(d = 0; d<1024; d++){
     if((pgdir[d] & PTE_U) && (pgdir[d] & PTE_P)){
       pgtab = (pte_t*)p2v(PTE_ADDR(pgdir[d]));
@@ -633,10 +632,10 @@ void print_memory_usage(pde_t* pgdir){
             writeable = "y";
           else
             writeable = "n";
-          cprintf("%p -> %p , %s\n", VPN, PPN, writeable);
+          refs = page_refs(PPN);
+          cprintf("%p -> %p , [w: %s] , [refs: %d]\n", VPN, PPN, writeable, refs);
         }
       }
     }
   }
 }
-
