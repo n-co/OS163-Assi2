@@ -81,7 +81,7 @@ int kthread_id(void){
   return thread->tid;
 }
 
-void kthread_exit(void){  // TODO: not sure about this implementation
+void kthread_exit(void){
   struct thread *t;
   acqptable();
   thread->state = ZOMBIE;

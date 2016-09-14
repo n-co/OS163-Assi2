@@ -119,7 +119,7 @@ void wait_before_exec(struct thread* t){
   cp = t->tproc;
   int threadsAlive=0;
   
-  acquire(&cp->lock); // TODO: is "cp->lock" ok?
+  acquire(&cp->lock);
   cp->executed=1;
   while(1){
     for(ot=cp->pthreads; ot < &cp->pthreads[NTHREAD]; ot++){
@@ -144,8 +144,6 @@ void wait_before_exec(struct thread* t){
       return;
     }
 
-    sleep(cp, &cp->lock); // TODO: is "cp" ok?
+    sleep(cp, &cp->lock);
   }
 }
-
-

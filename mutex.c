@@ -73,7 +73,7 @@ int kthread_mutex_lock(int mutex_id){
   			panic("kthread_mutex_lock: trying to catch FREE mutex"); 		
   		}
   		
-  		while(xchg(&mx->state, LOCKED) == LOCKED){ // TODO what if FREE?
+  		while(xchg(&mx->state, LOCKED) == LOCKED){
   			sleep(mx, &mxtable.lock);
   		}
 

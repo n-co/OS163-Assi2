@@ -80,13 +80,9 @@ trap(struct trapframe *tf)
     break;
 
   case T_PGFLT:
-    //thread->tf = tf;
     if(cow_copyuvm(proc->pgdir) != 0){
-      //thread->tf = tf; //TODO: check if needed
       break;
     }
-    //else
-      //panic("COW == 0");
 
    
   //PAGEBREAK: 13

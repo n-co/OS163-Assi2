@@ -81,8 +81,8 @@ void test3(){ // check the refernces
 int
 main(int argc, char *argv[])
 {
-  //test1();
-  //test2(); 
+  test1();
+  test2(); 
   test3();
   exit();
 
