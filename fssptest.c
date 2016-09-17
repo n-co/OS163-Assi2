@@ -12,6 +12,7 @@ int main(int argc, char *argv[]){
 	}
 	char * a[3] = {"fssp", sol};
 	for(i = 0; i<times; i++){
+		printf(1,"%d:\n", i+1);
 		pid = fork();
 		if(pid == 0){
 			exec(a[0], a);

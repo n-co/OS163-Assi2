@@ -80,11 +80,11 @@ trap(struct trapframe *tf)
     break;
 
   case T_PGFLT:
-    if(cow_copyuvm(proc->pgdir) != 0){
+    if(proc && (tf->cs&3) == DPL_USER && cow_copyuvm(proc->pgdir) != 0){
       break;
     }
-
-   
+    // else, continue in "default"
+       
   //PAGEBREAK: 13
   default:
     if(proc == 0 || (tf->cs&3) == 0){

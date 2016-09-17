@@ -577,6 +577,7 @@ procdump(void)
   char *state;
   uint pc[10];
   
+  cprintf(" - - - - - - - - procdump start - - - - - - - - \n");
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if(p->state == UNUSED)
       continue;
@@ -605,6 +606,7 @@ procdump(void)
       cprintf("\n");
     }
   }
+  cprintf(" - - - - - - - -  procdump end  - - - - - - - - \n");
 }
 
 void acqptable(void){

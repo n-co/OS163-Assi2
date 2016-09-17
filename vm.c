@@ -11,7 +11,7 @@ extern char data[];  // defined by kernel.ld
 pde_t *kpgdir;  // for use in scheduler()
 struct segdesc gdt[NSEGS];
 
-static int page_counters[60*1024];    // 3.2 240 MB
+static int page_counters[PHYSTOP/PGSIZE];
 struct spinlock pg_count_lock;        // 3.2 lock
 #define PA_INX(pa) (pa>>12)          //3.2
  
@@ -241,6 +241,8 @@ allocuvm(pde_t *pgdir, uint oldsz, uint newsz)
     }
     memset(mem, 0, PGSIZE);
     mappages(pgdir, (char*)a, PGSIZE, v2p(mem), PTE_W|PTE_U);
+
+    page_counters[PA_INX(v2p(mem))] = 1;
   }
   return newsz;
 }
@@ -380,6 +382,9 @@ copyuvm(pde_t *pgdir, uint sz)
     if((mem = kalloc()) == 0)
       goto bad;
     memmove(mem, (char*)p2v(pa), PGSIZE);
+
+    page_counters[PA_INX(v2p(mem))] = 1;
+
     if(mappages(d, (void*)i, PGSIZE, v2p(mem), flags) < 0)
       goto bad;
   }
@@ -437,20 +442,16 @@ cow_copyuvm(pde_t *pgdir)
   acquire(&pg_count_lock);
   faulty_address = rcr2(); // virtual address in a read-only page  
 
-  if((pte = walkpgdir(pgdir, (void*)faulty_address, 0)) == 0)
-    panic("cow_copyuvm: pte should exist");
+  if((pte = walkpgdir(pgdir, (void*)faulty_address, 0)) == 0){
+    goto bad;
+  }
   pa = PTE_ADDR(*pte);
   flags = PTE_FLAGS(*pte);
 
-  // is the page fault is real?
-  /*if(!(flags & PTE_W)){
-    panic("NOT writable");
+  // is the page fault real?
+  if(!(flags & PTE_SH)){ // not shareable
     goto bad;
-  }*/
-  /*if(!(flags & PTE_SH)){
-    panic("NOT SHAREABLE");
-    goto bad;
-  }*/
+  }
  
   if (faulty_address < proc->sz) {
 
@@ -459,6 +460,7 @@ cow_copyuvm(pde_t *pgdir)
         goto bad;
       }
       memmove(mem, (char*)p2v(pa), PGSIZE);
+      page_counters[PA_INX(v2p(mem))] = 1;
 
       *pte = v2p(mem) | flags;
       *pte &= ~PTE_SH;

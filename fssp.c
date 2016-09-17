@@ -201,6 +201,8 @@ void init_barrier(barrier *b, int limit){
 }
 
 void kill_barrier(barrier *b){
+	kthread_mutex_unlock(b->pre_mx);
+	kthread_mutex_unlock(b->post_mx);
 	kthread_mutex_dealloc(b->pre_mx);
 	kthread_mutex_dealloc(b->post_mx);
 	b->limit = 0;
