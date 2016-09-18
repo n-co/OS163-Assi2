@@ -8,7 +8,7 @@
 #define STK_SIZE 4096
 
 void test1(void);
-//void* test1_threadfunc();
+void* test1_threadfunc();
 void test2(void);
 void* test2_threadfunc();
 
@@ -29,8 +29,10 @@ int main(void){
   	
   	exit();
   }
-  else
+  else{
   	wait();
+  	printf(1, "TEST 1.b. PASSED - process killed by executing\n");
+  }
   //if(tester1!=1)
   //	printf(1, "TEST 1.a. FAILED - process didn't forked\n");
   
@@ -52,26 +54,23 @@ int main(void){
 }
 
 void test1(void){
-	/*void *stack1 = malloc(STK_SIZE);	
-	void *stack2 = malloc(STK_SIZE);	
-	void *stack3 = malloc(STK_SIZE);	
+	void *stack = malloc(STK_SIZE);	
 
-	kthread_create(test1_threadfunc, stack1, STK_SIZE);
-	kthread_create(test1_threadfunc, stack2, STK_SIZE);
-	kthread_create(test1_threadfunc, stack3, STK_SIZE);
-	printf(1,"HELLO!\n");
-	char *_args[3] = {"ls", 0};
-	exec(_args[0], _args);	*/
+	kthread_create(test1_threadfunc, stack, STK_SIZE);
+
+	while(tester11 == 0) sleep(10);
+
+	char *a[2] = {"cd", 0};
+	exec(a[0], a);
 }
-/*
+
 void* test1_threadfunc(){
 	while(1){
-		printf(1,"looping\n");
-		sleep(100);
+		tester11 = 1;
 	}
 
-	exit();
-}*/
+	return 0;
+}
 
 void test2(void){
 	tester2 = -1;
